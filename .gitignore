@@ -1,0 +1,8 @@
+ios/Web/
+ios/Generated/
+ios/*.xcodeproj/
+build/
+*.p8
+*.p12
+*.mobileprovision
+.DS_Store

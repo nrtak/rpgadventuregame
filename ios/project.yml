@@ -1,0 +1,39 @@
+name: RPGAdventureGame
+options:
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    PRODUCT_BUNDLE_IDENTIFIER: com.rpgadventuregame.app
+    DEVELOPMENT_TEAM: R3233N87DC
+    SWIFT_VERSION: "5.0"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    MARKETING_VERSION: "0.3.1"
+    CURRENT_PROJECT_VERSION: "1"
+targets:
+  RPGAdventureGame:
+    type: application
+    platform: iOS
+    sources:
+      - path: GameApp.swift
+      - path: Web
+        type: folder
+        buildPhase: resources
+    info:
+      path: Generated/Info.plist
+      properties:
+        CFBundleDisplayName: RPG Adventure
+        UILaunchScreen: {}
+        UIRequiresFullScreen: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        ITSAppUsesNonExemptEncryption: false
+    settings:
+      base:
+        CODE_SIGN_STYLE: Automatic
+schemes:
+  RPGAdventureGame:
+    build:
+      targets:
+        RPGAdventureGame: all
