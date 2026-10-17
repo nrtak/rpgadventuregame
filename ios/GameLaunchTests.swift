@@ -16,5 +16,15 @@ final class GameLaunchTests: XCTestCase {
         XCTAssertTrue(close.waitForExistence(timeout: 5), "Journal must respond to touch")
         close.tap()
         XCTAssertTrue(journal.exists)
+        app.webViews.buttons["Pause"].firstMatch.tap()
+        let practice = app.webViews.buttons["Crew practice"].firstMatch
+        XCTAssertTrue(practice.waitForExistence(timeout: 5))
+        practice.tap()
+        let guardButton = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Guard")).firstMatch
+        XCTAssertTrue(guardButton.waitForExistence(timeout: 10), "Native menu must open the playable crew battle")
+        let battle = XCTAttachment(screenshot: app.screenshot())
+        battle.name = "Crew battle on iPhone simulator"
+        battle.lifetime = .keepAlways
+        add(battle)
     }
 }
