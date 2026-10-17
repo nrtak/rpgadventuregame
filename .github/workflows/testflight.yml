@@ -1,0 +1,82 @@
+name: TestFlight upload
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  upload:
+    runs-on: macos-15
+    timeout-minutes: 35
+    environment: testflight
+    env:
+      CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+      CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      PROFILE: ${{ secrets.APPLE_PROFILE_BASE64 }}
+      API_KEY: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
+      API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      API_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify signing configuration
+        shell: bash
+        run: |
+          for value in CERTIFICATE CERTIFICATE_PASSWORD PROFILE API_KEY API_KEY_ID API_ISSUER; do
+            if [ -z "${!value}" ]; then echo "::error::Missing signing secret: $value"; exit 1; fi
+          done
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Prepare app
+        run: |
+          node ios/prepare-web.mjs
+          swift ios/generate-icon.swift ios/Generated/Assets.xcassets/AppIcon.appiconset
+          brew install xcodegen
+          xcodegen generate --spec ios/project.yml
+      - name: Install signing material
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          SIGN_DIR="$RUNNER_TEMP/rpg-signing"
+          mkdir -p "$SIGN_DIR" "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "$CERTIFICATE" | base64 --decode > "$SIGN_DIR/distribution.p12"
+          printf '%s' "$PROFILE" | base64 --decode > "$SIGN_DIR/app.mobileprovision"
+          printf '%s' "$API_KEY" > "$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8"
+          security cms -D -i "$SIGN_DIR/app.mobileprovision" > "$SIGN_DIR/profile.plist"
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$SIGN_DIR/profile.plist")
+          APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$SIGN_DIR/profile.plist")
+          test "$APP_ID" = 'R3233N87DC.com.rpgadventuregame.app'
+          cp "$SIGN_DIR/app.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
+          echo "PROFILE_UUID=$UUID" >> "$GITHUB_ENV"
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 24)
+          echo "::add-mask::$KEYCHAIN_PASSWORD"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$SIGN_DIR/build.keychain-db"
+          security set-keychain-settings -lut 21600 "$SIGN_DIR/build.keychain-db"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$SIGN_DIR/build.keychain-db"
+          security import "$SIGN_DIR/distribution.p12" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$SIGN_DIR/build.keychain-db"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$SIGN_DIR/build.keychain-db"
+          security list-keychains -d user -s "$SIGN_DIR/build.keychain-db"
+      - name: Archive signed app
+        run: >-
+          xcodebuild -project ios/RPGAdventureGame.xcodeproj -scheme RPGAdventureGame
+          -configuration Release -destination 'generic/platform=iOS' -archivePath build/Game.xcarchive
+          CURRENT_PROJECT_VERSION=${{ github.run_number }} CODE_SIGN_STYLE=Manual
+          CODE_SIGN_IDENTITY='Apple Distribution' PROVISIONING_PROFILE_SPECIFIER="$PROFILE_UUID" archive
+      - name: Export and upload to TestFlight
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, plistlib
+          with open('build/ExportOptions.plist','wb') as f:
+              plistlib.dump({'method':'app-store-connect','teamID':'R3233N87DC','signingStyle':'manual','provisioningProfiles':{'com.rpgadventuregame.app':os.environ['PROFILE_UUID']},'uploadSymbols':True},f)
+          PY
+          xcodebuild -exportArchive -archivePath build/Game.xcarchive -exportPath build/export -exportOptionsPlist build/ExportOptions.plist
+          xcrun altool --upload-app --type ios --file build/export/RPGAdventureGame.ipa --apiKey "$API_KEY_ID" --apiIssuer "$API_ISSUER"
+      - name: Remove temporary signing material
+        if: always()
+        shell: bash
+        run: |
+          security delete-keychain "$RUNNER_TEMP/rpg-signing/build.keychain-db" || true
+          rm -f "$HOME/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8"
+          if [ -n "${PROFILE_UUID:-}" ]; then rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"; fi
+          rm -rf "$RUNNER_TEMP/rpg-signing"

@@ -21,6 +21,7 @@ jobs:
         run: node ios/prepare-web.mjs
       - name: Generate Xcode project
         run: |
+          swift ios/generate-icon.swift ios/Generated/Assets.xcassets/AppIcon.appiconset
           brew install xcodegen
           xcodegen generate --spec ios/project.yml
       - name: Compile iPhone simulator app
