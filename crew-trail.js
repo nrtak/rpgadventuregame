@@ -1,0 +1,5 @@
+import {nearestFloor} from './navigation.js';
+const distance=(a,b)=>Math.hypot((a.x-b.x)*1.875,a.y-b.y);
+export function createTrail(area,point){const sign=point.x<30?1:-1;return {area,head:{...point},points:[{...point},...[1,2,3,4].map(i=>nearestFloor(area,{x:point.x+sign*i*5.2,y:point.y+i*1.4}))]}}
+export function advanceTrail(trail,point){const d=distance(trail.head,point);if(d<.35)return;if(d>16){Object.assign(trail,createTrail(trail.area,point));return}trail.head={...point};trail.points.unshift({...point});let length=0;for(let i=1;i<trail.points.length;i++){length+=distance(trail.points[i-1],trail.points[i]);if(length>50){trail.points.length=i+1;break}}}
+export function trailPosition(trail,index){if(index===0)return {...trail.head};let remaining=index*9.8;const points=[trail.head,...trail.points];for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],d=distance(a,b);if(d>=remaining&&d>0){const t=remaining/d;return nearestFloor(trail.area,{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t})}remaining-=d}return {...points.at(-1)}}
