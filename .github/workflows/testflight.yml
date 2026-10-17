@@ -5,7 +5,7 @@ permissions:
   contents: read
 jobs:
   upload:
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 35
     environment: testflight
     env:
@@ -17,6 +17,8 @@ jobs:
       API_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
     steps:
       - uses: actions/checkout@v4
+      - name: Select App Store compatible Xcode
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
       - name: Verify signing configuration
         shell: bash
         run: |
