@@ -22,7 +22,11 @@ for i in 0..<8 {
     p.fill()
 }
 image.unlockFocus()
-let rep = NSBitmapImageRep(data: image.tiffRepresentation!)!
+let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 1024, pixelsHigh: 1024, bitsPerSample: 8, samplesPerPixel: 3, hasAlpha: false, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+NSGraphicsContext.saveGraphicsState()
+NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+image.draw(in: NSRect(x: 0, y: 0, width: 1024, height: 1024))
+NSGraphicsContext.restoreGraphicsState()
 try rep.representation(using: .png, properties: [:])!.write(to: root.appendingPathComponent("AppIcon.png"))
 let contents = """
 {"images":[{"filename":"AppIcon.png","idiom":"universal","platform":"ios","size":"1024x1024"}],"info":{"author":"xcode","version":1}}

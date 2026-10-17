@@ -42,6 +42,7 @@ targets:
       - path: GameLaunchTests.swift
     settings:
       base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.rpgadventuregame.app.uitests
         GENERATE_INFOPLIST_FILE: YES
     dependencies:
       - target: RPGAdventureGame
