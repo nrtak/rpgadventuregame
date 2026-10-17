@@ -35,8 +35,21 @@ targets:
       base:
         CODE_SIGN_STYLE: Automatic
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+  GameLaunchTests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: GameLaunchTests.swift
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+    dependencies:
+      - target: RPGAdventureGame
 schemes:
   RPGAdventureGame:
     build:
       targets:
         RPGAdventureGame: all
+    test:
+      targets:
+        - GameLaunchTests

@@ -30,6 +30,16 @@ jobs:
           -scheme RPGAdventureGame -configuration Release
           -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
           -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Launch game and verify touch interaction
+        shell: bash
+        run: |
+          DEVICE=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for items in d["devices"].values() for x in items if "iPhone" in x["name"]))')
+          xcodebuild -project ios/RPGAdventureGame.xcodeproj -scheme RPGAdventureGame -configuration Release -destination "platform=iOS Simulator,id=$DEVICE" -derivedDataPath build -resultBundlePath build/LaunchTest.xcresult CODE_SIGNING_ALLOWED=NO test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: iPhone-launch-test
+          path: build/LaunchTest.xcresult
       - uses: actions/upload-artifact@v4
         with:
           name: RPGAdventureGame-simulator
